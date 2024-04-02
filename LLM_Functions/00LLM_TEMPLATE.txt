@@ -1,0 +1,36 @@
+## FUNCTION NAME
+<input>
+
+## DESCRIPTION
+<input>
+
+## ARGUMENT
+<input>
+
+## PARAMTERS
+* Max Response
+100
+
+* Temperature
+0.9
+
+* Top P 
+0.95
+
+* Frequency Penalty
+0
+
+* Presence Penalty
+0
+
+## MESSAGE HISTORY
+* Include Memory (history messages from chat): No/Yes
+
+* system
+
+
+* user
+{{userMessage}}
+
+## EXTERNAL TOOLS
+
