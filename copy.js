@@ -12,8 +12,6 @@ const defaultState = {
   "genreReq":null, //store the preferred genre  
 }
 
-
-// define variables
 const genreList = [
     "anything",
     "Comedy",
@@ -59,7 +57,7 @@ const genreList = [
 ];
 // anything that prompts that the bot is going the right direction
 // can just declare as positive.includes(response)
-const postive = ["ok", "sure", "correct", "fine"];
+const positive = ["ok", "sure", "correct", "fine", "yes"];
 
 const reqList = `
 - Providing trending anime or manga based on genre, rating etc. 
@@ -67,7 +65,6 @@ const reqList = `
 - Getting a random anime quote
 - Identifying an anime from an image
 `
-
 
 async function run(payload, state, tools) {  
   // console.log("In Run: ", state)
@@ -105,7 +102,7 @@ async function run(payload, state, tools) {
 /** Startup.
  * @param {AppState} state the state of the app
  * @param {Tool} tools available tools to perform a task
- */
+*/
 async function startup(state, tools) {
   tools.reply(`Hello! Welcome to the Anime Query Bot. Here are some
   information I can provide you!
@@ -166,26 +163,30 @@ async function handleTrending(payload, state, tools){
 
   // ask for genre
   if ((isTrendingAnimeRequested || isTrendingMangaRequested) && !isGenreRequested){
-    const genre = await tools.getGenre({userMessage: response}, {memory: tools.getChatHistory(5)})
-    if (genreList.includes(genre)) {
+    const genre = await tools.getGenre({userMessage: response}, {memory: tools.getChatHistory(5)});
+    if (genreList.includes(genre) || positive.includes(response)) {
       state.genreReq = genre;
-      state.isGenreRequested = true;
       // if got preference
-      if (state.genreReq !== `anything`){
+      if (genreReq === `` || genreReq === null){
+        tools.reply(genre);
+      } else if (state.genreReq !== `anything`){
         tools.reply(`We detected that the genre you want is ${state.genreReq}. Is that correct?`);
+        state.isGenreRequested = true;
       } else {
         tools.reply(`We will provide trending anime/manga for all genres. Is that ok?`);
+        state.isGenreRequested = true;
       }
-    } else if (genreReq === `` || genreReq === null){
-      tools.reply(genre);
+    } else {
+      tools.reply('Let me know what more you want to query!')
+      resetState(state);
     }
   }
 
  //////////////////////////////////////////////get trending anime/////////////////////////////////////////////////
   if (isTrendingAnimeRequested && isGenreRequested) {
-    if (postive.includes(response)){
+    if (positive.includes(response)){
       // get trending anime from api
-      getTrendingAnime = await getTrendingAnime(genreReq);
+      getTrendingAnime = await getTrending(genreReq, isTrendingAnimeRequested, isTrendingMangaRequested);
 
       // if no error detected, generate top 5 anime
       if (!(getTrendingAnime.includes('Error'))){
@@ -201,8 +202,6 @@ async function handleTrending(payload, state, tools){
             No. of Episodes: ${animeInfo['episodeCount']}`;
             tools.reply(await tools.formatMessage({content: top5Anime})); 
         }
-        // TRY BUT FAIL: generate all 5 in one message but overload.
-        // tools.reply(await tools.formatMessage({content: top5Anime}));
       }
       // if error detected, return error message and try again
       else {
@@ -211,19 +210,15 @@ async function handleTrending(payload, state, tools){
     }
     // done generating trending anime
     tools.reply('Let me know what more you want to query!')
-    // state.isTrendingAnimeRequested = false;
-    // state.isGenreRequested = false;
-    // state.genreReq = ``;
     resetState(state);
   }
  //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
  //////////////////////////////////////////////get trending manga/////////////////////////////////////////////////
   if (isTrendingMangaRequested && isGenreRequested) {
-    if (postive.includes(response)){
+    if (positive.includes(response)){
       // get trending anime from api
-      getTrendingManga = await getTrendingManga(genreReq);
-
+      getTrendingManga = await getTrending(genreReq, isTrendingAnimeRequested, isTrendingMangaRequested);
       // if no error detected, generate top 5 anime
       if (!(getTrendingManga.includes('Error'))){
         // convert to Javascript object
@@ -239,8 +234,6 @@ async function handleTrending(payload, state, tools){
             No. of Chapter: ${mangaInfo['chapterCount']}`;
             tools.reply(await tools.formatMessage({content: top5Manga})); 
         }
-        // TRY BUT FAIL: generate all 5 in one message but overload.
-        // tools.reply(await tools.formatMessage({content: top5Anime}));
       }
       // if error detected, return error message and try again
       else {
@@ -249,54 +242,37 @@ async function handleTrending(payload, state, tools){
     }
     // done generating trending anime
     tools.reply('Let me know what more you want to query!')
-    // state.isTrendingMangaRequested = false;
-    // state.isGenreRequested = false;
-    // state.genreReq = ``;
     resetState(state);
+  }
+  async function getTrending(genreChoice, isTrendingAnimeRequested, isTrendingMangaRequested) {
+    if (isTrendingAnimeRequested){
+      var apiURL = `https://kitsu.io/api/edge/anime?`;
+    }
+    else if (isTrendingMangaRequested){
+      var apiURL = `https://kitsu.io/api/edge/manga?`;
+    }
+    if (genreChoice !==  "null"){
+      apiURL = apiURL + `filter[categories]=${genreChoice}`;
+    }
+    try {
+      const trending = await fetch(apiURL, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/vnd.api+json',
+        },
+      });
+      const trendingManga = await trending.text();
+      return trendingManga;
+    } catch (error) {
+      const errorMsg = `Error fetching trending manga: ${error}`;
+      console.error(errorMsg);
+      return errorMsg;
+    }
   }
  //////////////////////////////////////////////////////////////////////////////////////////////////////////  
 }
-async function getTrendingAnime(genreChoice) {
-  var apiURL = `https://kitsu.io/api/edge/anime?`;
-  if (genreChoice !==  "null"){
-    apiURL = `https://kitsu.io/api/edge/anime?filter[categories]=${genreChoice}`;
-  }
-  console.log(apiURL);
-  try {
-    const trending = await fetch(apiURL, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/vnd.api+json',
-      },
-    });
-    const trendingAnime = await trending.text();
-    return trendingAnime;
-  } catch (error) {
-    const errorMsg = `Error fetching trending anime: ${error}`;
-    console.error(errorMsg);
-    return errorMsg;
-  }
-}
-async function getTrendingManga(genreChoice) {
-  var apiURL = `https://kitsu.io/api/edge/manga?`;
-  if (genreChoice !==  "null"){
-    apiURL = `https://kitsu.io/api/edge/manga?filter[categories]=${genreChoice}`;
-  }
-  try {
-    const trending = await fetch(apiURL, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/vnd.api+json',
-      },
-    });
-    const trendingManga = await trending.text();
-    return trendingManga;
-  } catch (error) {
-    const errorMsg = `Error fetching trending manga: ${error}`;
-    console.error(errorMsg);
-    return errorMsg;
-  }
-}
+
+
 
 
 // HANDLE SEARCH
@@ -306,7 +282,8 @@ async function handleSearch(payload, state, tools){
 
 // HANDLE QUOTE
 async function handleGetQuote(payload, state, tools){
-  return;
+  console.log("In handleGetQuote; ", state);
+  tools.reply()
 }
 
 // HANDLE IMAGE ID
