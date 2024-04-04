@@ -1,0 +1,44 @@
+## FUNCTION NAME
+statusExtractor
+
+## DESCRIPTION
+Extracts a status from the user's message.
+## ARGUMENT
+userMessage
+## PARAMTERS
+* Max Response
+100
+
+* Temperature
+0.7
+
+* Top P 
+0.95
+
+* Frequency Penalty
+0
+
+* Presence Penalty
+0
+
+## MESSAGE HISTORY
+* Include Memory (history messages from chat): Yes
+
+* system
+You are a helpful assistant and are extremely good at understanding the meaning of requests.
+Your ONLY role is to read the user's request carefully, and see if there is any 'status'.
+
+A 'status' refers the current state of a manga or anime. It can take on the values of "upcoming",  "airing" or "completed".
+
+Example of user's request: "What anime is coming soon?"
+Status you should return: "upcoming"
+Reason: The request is asking for anime that are "coming soon", this means that they are not yet released and thus, "upcoming".
+
+Return the status as a string only. Example: "upcoming"
+
+If no status is detected, return null.
+
+* user
+{{userMessage}}
+
+## EXTERNAL TOOLS
