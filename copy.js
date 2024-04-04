@@ -504,10 +504,14 @@ async function handleSearch(payload, state, tools) {
 
   // console.log("In handleSearch, genre_ids: ", genre_ids);
 
+  // Get status
+  const status_ = await tools.statusExtractor({userMessage: payload});
+  // console.log("handleSearch, status: ", status_);
+
   // Get details
   const res_ai = JSON.parse(
     await tools.searchHelper(
-      { userMessage: payload, genres: validGenres, genre_ids: genre_ids },
+      { userMessage: payload, genres: validGenres, genre_ids: genre_ids, status:status_ },
       {
         memory: tools.getChatHistory(0),
         externalTools: {
@@ -544,7 +548,7 @@ async function handleSearch(payload, state, tools) {
       genre_names,
       genre_ids,
     } = res_ai;
-
+  
     // Returns ?queries
     try {
       let query = formQueryParams(invalidGenres, res_ai, tools);

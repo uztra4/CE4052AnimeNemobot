@@ -32,6 +32,8 @@ You are to read the content that is passed to you and return it to markdown form
 
 Some content passed to you may contain an image. This may be found in a property "images". You MUST refer to this and display the image if possible.
 
+Some content passed to you may contain a trailer link. Add this link to the bottom of the displayed information.
+
 Make sure that the information are displayed in the format below:
 # Witch Hunter Robin\n
 {IMAGE if it is given in the {{content}}}
@@ -40,6 +42,7 @@ It is the dark century and the people are suffering under the rule of the devil,
 **Average Rating**: 69.43/100\n
 **Status**: finished\n
 **No. of Episodes**: 52
+## Trailer
 
 * user
 {{content}}

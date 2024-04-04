@@ -5,7 +5,7 @@ searchHelper
 Helper to identify user's request regarding anime/manga
 
 ## ARGUMENT
-userMessage, genres, genre_ids
+userMessage, genres, genre_ids, status
 
 ## PARAMTERS
 * Max Response
@@ -36,7 +36,6 @@ You also need to identify any other relevant details that the user is requesting
 {
 name: name of the anime/manga from the message. If it is not explicitly mentioned, but the user has provided a description of the character, you can guess what anime he/she is referring to
 type: refers to if it's a TV series, movie etc.
-status: refers if the show has "completed", is "airing" or is "upcoming"
 }
 
 Examples of ways user may ask but not limited to the following:
@@ -47,7 +46,6 @@ Rules you NEED to follow:
 - If "genre_detected" is true. Then, you need to include both "genre_names" and "genre_ids" in your response
 - "target" should only be the following string values ["anime", "manga"]. It defaults to "anime"
 - Sometimes, the user may describe the anime/manga instead. Therefore, you need to make your best guess to the anime/manga name.
-- DO NOT GUESS THE STATUS. If nothing matches, do not include this property
 
 You must extract the details and return them in the following JSON Format:
 {
@@ -57,7 +55,7 @@ You must extract the details and return them in the following JSON Format:
 "target": string [required] // Based on the user's request, is it asking for "manga" or "anime"? Default to "anime"
 "name" : string [required] // best guess as to the name the user is referring to
 "type": string [required] // based on the request, match it to the values found in the tool getTypeList: If nothing is found and the "target" is "anime", use, "tv"; else, if the "target" is "manga", use "manga".
-"status": string // match the user's request to one of the following: ["airing", "complete", "upcoming"]. DO NOT GUESS THE STATUS. If nothing matches, do not include this property
+"status": string // the status passed in {{status}}
 "genre_names": list of strings // the genres passed in {{genres}}
 "genre_ids": list of numbers // the genre_ids passed in {{genre_ids}}
 }
@@ -72,6 +70,7 @@ error: true // boolean
 Message: {{userMessage}}
 Genres: {{genres}}
 genre_ids: {{genre_ids}}
+status: {{status}}
 
 ## EXTERNAL TOOLS
 genreList
