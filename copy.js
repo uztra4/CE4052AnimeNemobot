@@ -493,25 +493,25 @@ async function handleSearch(payload, state, tools) {
   let invalidGenres = [];
   // keep valid genres
   for (let g of genres) {
-    if (jikanGenres.includes(g.toLowerCase())) validGenres.push(g);
+    if (jikanGenres.includes(g.toLowerCase())) validGenres.push(g.toLowerCase());
     else invalidGenres.push(g);
   }
 
-  // console.log("handleSearch, validGenres: ", validGenres);
+  console.log("handleSearch, validGenres: ", validGenres);
 
   // Match Genre Ids
   let genre_ids = matchGenreWithMalIDs(validGenres);
 
-  // console.log("In handleSearch, genre_ids: ", genre_ids);
+  console.log("In handleSearch, genre_ids: ", genre_ids);
 
   // Get status
-  const status_ = await tools.statusExtractor({userMessage: payload});
-  // console.log("handleSearch, status: ", status_);
+  const status_res = JSON.parse(await tools.statusExtractor({userMessage: payload}));
+  console.log("handleSearch, status: ", status_res);
 
   // Get details
   const res_ai = JSON.parse(
     await tools.searchHelper(
-      { userMessage: payload, genres: validGenres, genre_ids: genre_ids, status:status_ },
+      { userMessage: payload},
       {
         memory: tools.getChatHistory(0),
         externalTools: {
@@ -540,18 +540,14 @@ async function handleSearch(payload, state, tools) {
     const {
       is_guess,
       name_detected,
-      genre_detected,
       target,
       name,
       type,
-      status,
-      genre_names,
-      genre_ids,
     } = res_ai;
   
     // Returns ?queries
     try {
-      let query = formQueryParams(invalidGenres, res_ai, tools);
+      let query = formQueryParams(invalidGenres, res_ai, status_res.status, genre_ids, tools);
       let api = `${jikanBaseApi}/${target}?${query}`;
 
       console.log("handleSearch, API: ", api);
@@ -567,7 +563,7 @@ async function handleSearch(payload, state, tools) {
         );
       } else {
         // Name detected
-        if (name_detected && !is_guess) {
+        if (name && !is_guess) {
           tools.reply(`Here is more information about the ${target} _${name}_`);
           await formatInfoResponse(data[0], tools);
         } else if (is_guess) {
@@ -584,7 +580,7 @@ async function handleSearch(payload, state, tools) {
           }
         }
         // No Name detected
-        else if (genre_detected) {
+        else if (genre_ids.length !== 0) {
           tools.reply(
             `Based on your description, here are some ${target} that may be of interest:`
           );
@@ -612,7 +608,7 @@ async function handleSearch(payload, state, tools) {
 function matchGenreWithMalIDs(genres) {
   ids = [];
   jikanGenresMapping.genres.forEach((g) => {
-    if (genres.includes(g.genre)) {
+    if (genres.includes(g.genre.toLowerCase())) {
       ids.push(g.mal_id);
     }
   });
@@ -623,15 +619,12 @@ function formQueryParams(
   invalidGenres,
   {
     is_guess,
-    name_detected,
-    genre_detected,
     target,
     name,
     type,
-    status,
-    genre_names,
-    genre_ids,
   },
+  status,
+  genre_ids,
   tools
 ) {
   let base = `type=${type}`;
@@ -639,13 +632,13 @@ function formQueryParams(
     base += `&status=${status}`;
   }
   // Name detected
-  if (name_detected && !is_guess) {
+  if (name && !is_guess) {
     return `${base}&q=${name}`;
   } else if (is_guess) {
     return `${base}&q=${name}`;
   }
   // No Name detected
-  else if (genre_detected) {
+  else if (genre_ids.length !== 0) {
     genres_string = genre_ids.join(",");
     invalidGenresString = invalidGenres.join(",");
     return invalidGenres.length === 0

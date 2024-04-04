@@ -5,7 +5,7 @@ searchHelper
 Helper to identify user's request regarding anime/manga
 
 ## ARGUMENT
-userMessage, genres, genre_ids, status
+Message: {{userMessage}}
 
 ## PARAMTERS
 * Max Response
@@ -43,21 +43,16 @@ Examples of ways user may ask but not limited to the following:
 
 Rules you NEED to follow:
 - For any property with [required], you must include that property in the response. Else, you can exclude it.
-- If "genre_detected" is true. Then, you need to include both "genre_names" and "genre_ids" in your response
 - "target" should only be the following string values ["anime", "manga"]. It defaults to "anime"
 - Sometimes, the user may describe the anime/manga instead. Therefore, you need to make your best guess to the anime/manga name.
 
 You must extract the details and return them in the following JSON Format:
 {
-"genre_detected": boolean [required] // if {{genres}} passed by the user is not empty, it is true
 "name_detected": boolean [required]// your understanding as to if a specific name has been seen in the user's request. false if no specific name was mentioned.
 "is_guess": boolean [required] // if you guessed the anime name based on the description provided by the user.
 "target": string [required] // Based on the user's request, is it asking for "manga" or "anime"? Default to "anime"
 "name" : string [required] // best guess as to the name the user is referring to
 "type": string [required] // based on the request, match it to the values found in the tool getTypeList: If nothing is found and the "target" is "anime", use, "tv"; else, if the "target" is "manga", use "manga".
-"status": string // the status passed in {{status}}
-"genre_names": list of strings // the genres passed in {{genres}}
-"genre_ids": list of numbers // the genre_ids passed in {{genre_ids}}
 }
 
 If you do not understand the user's request ask the user again, politely. However, return the following response:
