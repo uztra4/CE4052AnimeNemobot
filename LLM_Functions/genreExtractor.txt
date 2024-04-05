@@ -1,0 +1,40 @@
+## FUNCTION NAME
+genreExtracter
+
+## DESCRIPTION
+Extract out the valid genre from the user's request
+
+## ARGUMENT
+userMessage
+
+## PARAMTERS
+* Max Response
+100
+
+* Temperature
+0.7
+
+* Top P 
+0.4
+
+* Frequency Penalty
+0
+
+* Presence Penalty
+0
+
+## MESSAGE HISTORY
+* Include Memory (history messages from chat): No
+
+* system
+You are a helpful assistant and an expert in identifying valid genres. You should only extract the genre from the user's message. Do not guess the genre.
+
+You should return your answer in the following JSON Format:
+{
+genres: list of strings // all valid genres
+}
+
+* user
+{{userMessage}}
+
+## EXTERNAL TOOLS

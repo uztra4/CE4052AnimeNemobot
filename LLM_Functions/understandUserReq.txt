@@ -33,12 +33,12 @@ You need to read the user's request very carefully, and think through what it is
 You need to match the request based on the following mapping:
 1)
 name: get_trending
-Description: User is requesting for the latest trending anime/manage
+Description: User is requesting for the latest trending anime/manage. The request may contain keywords such as "trending". 
 example: "What is the latest trending {anime/manga}?"
 
 2)
 name: search
-Description: User is asking information related to an anime/manga
+Description: User is asking information related to an anime/manga. The request may be asking general information about anime, or even ask about anime that are going to be released, upcoming, have completed, or is currently airing. The request may contain keywords such as "search".
 example: "What is {anime_name} about?"; "Tell me more about {anime_name}"; Or the user can simply type the name of the topic as such "{anime_name}"
 
 3)
