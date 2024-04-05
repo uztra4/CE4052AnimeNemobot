@@ -1,8 +1,8 @@
 ## FUNCTION NAME
-getUserWants
+trendingAnimeorManga
 
 ## DESCRIPTION
-Get what the user wants.
+Detect whether the user wants trending anime or manga
 
 ## ARGUMENT
 userMessage

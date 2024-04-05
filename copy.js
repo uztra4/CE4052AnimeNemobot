@@ -9,7 +9,8 @@ const defaultState = {
   "isTrendingAnimeRequested":false, //if trending anime is requested
   "isTrendingMangaRequested":false, //if trending anime is requested
   "isGenreRequested":false, //if genre is asked
-  "genreReq":null, //store the preferred genre  
+  "genreReq":null, //store the preferred genre
+  "quoteReq": null, //store what kind of quote request they want
 }
 
 const genreList = [
@@ -176,9 +177,11 @@ async function handleTrending(payload, state, tools){
         tools.reply(`We will provide trending anime/manga for all genres. Is that ok?`);
         state.isGenreRequested = true;
       }
-    } else {
-      tools.reply('Let me know what more you want to query!')
+    } else if (response === "no"){
+      tools.reply("Please let us know what you want to query!");
       resetState(state);
+    } else {
+      tools.reply(genre);
     }
   }
 
@@ -195,7 +198,8 @@ async function handleTrending(payload, state, tools){
         tools.reply(`Here are the top 5 anime that are trending for ${genreReq} right now!`);
         for (let i = 0; i < 5; i++) {
           const animeInfo = trendingAnime['data'][i]['attributes'];
-            top5Anime = `Title: ${animeInfo['titles']['en_jp']} 
+            top5Anime = `Title: ${animeInfo['titles']['en_jp']}
+            Image: ${(animeInfo['posterImage']['small'])}\n 
             Sypnosis: ${(animeInfo['synopsis'])} \n
             Average Rating: ${animeInfo['averageRating']} \n
             Status: ${animeInfo['status']} \n
@@ -226,11 +230,12 @@ async function handleTrending(payload, state, tools){
         tools.reply(`Here are the top 5 manga that are trending for ${genreReq} right now!`);
         for (let i = 0; i < 5; i++) {
           const mangaInfo = trendingManga['data'][i]['attributes'];
-            top5Manga = `Title: ${mangaInfo['canonicalTitle']} 
+            top5Manga = `Title: ${mangaInfo['canonicalTitle']}\n
+            Image: ${(mangaInfo['posterImage']['small'])}\n
             Sypnosis: ${(mangaInfo['synopsis'])} \n
             Average Rating: ${mangaInfo['averageRating']} \n
             Status: ${mangaInfo['status']} \n
-            No. of Volumes: ${mangaInfo['volumeCount']}
+            No. of Volumes: ${mangaInfo['volumeCount']}\n
             No. of Chapter: ${mangaInfo['chapterCount']}`;
             tools.reply(await tools.formatMessage({content: top5Manga})); 
         }
@@ -261,10 +266,11 @@ async function handleTrending(payload, state, tools){
           'Content-Type': 'application/vnd.api+json',
         },
       });
-      const trendingManga = await trending.text();
-      return trendingManga;
+      const trendingText = await trending.text();
+      console.log(trendingText)
+      return trendingText;
     } catch (error) {
-      const errorMsg = `Error fetching trending manga: ${error}`;
+      const errorMsg = `Error fetching trending manga/anime: ${error}`;
       console.error(errorMsg);
       return errorMsg;
     }
@@ -273,17 +279,71 @@ async function handleTrending(payload, state, tools){
 }
 
 
-
-
 // HANDLE SEARCH
 async function handleSearch(payload, state, tools){
+  resetState(state);
   return;
 }
 
-// HANDLE QUOTE
-async function handleGetQuote(payload, state, tools){
+async function handleGetQuote(payload, state, tools) {
   console.log("In handleGetQuote; ", state);
-  tools.reply()
+  const quoteReq = await tools.quoteReq({userMessage: payload}, {memory: tools.getChatHistory(5)});
+  console.log(quoteReq);
+  try {
+    const quotes = await getQuote(quoteReq);
+    console.log(JSON.parse(quotes)["error"]);
+    if (JSON.parse(quotes)["error"] === "No related quotes found!"){
+      tools.reply("No related quotes found!");
+    }else{
+      tools.reply("Generating quote...");
+      tools.reply(await tools.formatMessage({content: quotes})); // Reply with the quotes
+      resetState(state);
+    }
+  } catch (error){
+    tools.reply(quoteReq);
+  }
+
+  async function getQuote(quoteReq) {
+    quoteReqJson = JSON.parse(quoteReq)
+    console.log(quoteReqJson['returnType']);
+    var apiURL = `https://animechan.xyz/api/random/`;
+    switch(quoteReqJson['returnType']) {
+      case "random":
+        apiURLSearch = `https://animechan.xyz/api/random`;
+        break;
+      case "anime":
+        apiURLSearch = apiURL + `anime?title=` + quoteReqJson["en"];
+        break;
+      case "character":
+        apiURLSearch = apiURL + `character?name=` + quoteReqJson["character"];
+        break;
+    }
+    console.log(apiURLSearch);
+    try {
+      var response = await fetch(apiURLSearch);
+      // Check if the response status is ok
+      if (!response.ok) {
+        if (quoteReqJson['returnType'] === "anime"){
+          apiURLSearch = apiURL + `anime?title=` + quoteReqJson["en_jp"];
+          response = await fetch(apiURLSearch);
+          console.log(apiURL);
+          console.log(response);
+        }
+      }
+      // Parse the response as JSON
+      const data = await response.json();
+      // Handle the JSON data
+      console.log('Data:', data);
+      console.log(JSON.stringify(data));
+      // Construct quotesData
+      return JSON.stringify(data);
+    } catch (error) {
+      // Handle errors
+      console.error('Error fetching data:', error);
+      // Return error message
+      return "No related quotes found!";
+    }
+  }
 }
 
 // HANDLE IMAGE ID
