@@ -26,11 +26,16 @@ userMessage
 
 * system
 You are a helpful assistant and are extremely good at understanding the meaning of requests.
-Your ONLY role is to read the user's request carefully, and see if there is any 'status'.
 
-A 'status' refers the current state of a manga or anime. It can take on the values of "upcoming",  "airing" or "complete".
+IMPORTANT RULES YOU NEED TO FOLLOW:
+The status you return can only take the values ["upcoming", "complete",  "airing", null] 
 
-Think about why you identified the status as such.
+Your ONLY role is to read the user's request carefully, and see if there is any 'status'. 
+
+A 'status' refers the current state of a manga or anime. It can take on the values of "upcoming", "complete", "airing" or null if there is no status that you can detect.
+
+
+Think about why you identified the status as such. 
 
 Example of user's request: "What anime is coming soon?"
 Status you should return: "upcoming"
@@ -42,7 +47,7 @@ Reason: The request is merely asking about XXX anime, you should not include a s
 
 Return your response in the following JSON format:
 {
-"status": string // can be null if no status is detected
+"status": string // can be null if no status is detected.  The status you return can only take the values ["upcoming", "complete",  "airing", null] 
 "thought": string // your thought process as to why you decided this.
 }
 

@@ -498,12 +498,12 @@ async function handleSearch(payload, state, tools) {
     else invalidGenres.push(g);
   }
 
-  console.log("handleSearch, validGenres: ", validGenres);
+  // console.log("handleSearch, validGenres: ", validGenres);
 
   // Match Genre Ids
   let genre_ids = matchGenreWithMalIDs(validGenres);
 
-  console.log("In handleSearch, genre_ids: ", genre_ids);
+  // console.log("In handleSearch, genre_ids: ", genre_ids);
 
   // Get status
   const status_res = JSON.parse(
@@ -528,12 +528,7 @@ async function handleSearch(payload, state, tools) {
       }
     )
   );
-
-  // is_guess => LLM guessed the NAME of the anime
-  // name_detected => LLM detected a name in user's request
-  // genre_detected => LLM detected a genre in user's request
   console.log("handleSearch: ", res_ai);
-
   // Check res_ai
   if (!res_ai.hasOwnProperty("target")) {
     tools.reply(
@@ -541,10 +536,9 @@ async function handleSearch(payload, state, tools) {
     );
   } else {
     const { is_guess, name_detected, target, name, type } = res_ai;
-
     // Returns ?queries
     try {
-      let query = formQueryParams(
+      let { query, switch_exp } = formQueryParams(
         invalidGenres,
         res_ai,
         status_res.status,
@@ -552,59 +546,60 @@ async function handleSearch(payload, state, tools) {
         tools
       );
       let api = `${jikanBaseApi}/${target}?${query}`;
-
       console.log("handleSearch, API: ", api);
-
       const res = await fetch(api);
       const res_json = await res.json();
       const data = res_json.data;
       console.log("handleSearch, data: ", data);
-
       if (data.length === 0) {
         tools.reply(
           `I'm sorry but I cannot find any information regarding what you are looking for...`
         );
       } else {
-        // Name detected
-        if (name && !is_guess) {
-          tools.reply(`Here is more information about the ${target} _${name}_`);
-          await formatInfoResponse(data[0], tools);
-        } else if (is_guess) {
-          tools.reply(`You may be thinking of the ${target} _${name}_`);
-          // Get first
-          await formatInfoResponse(data[0], tools);
-          // Other
-          tools.reply(`Other relevant ${target} may be:`);
-          // Loop
-          cur_idx = 1;
-          while (cur_idx < data.length && cur_idx < 4) {
-            await formatInfoResponse(data[cur_idx], tools);
-            cur_idx++;
-          }
-        }
-        // No Name detected
-        else if (genre_ids.length !== 0) {
-          tools.reply(
-            `Based on your description, here are some ${target} that may be of interest:`
-          );
-          cur_idx = 0;
-          while (cur_idx < data.length && cur_idx < 4) {
-            await formatInfoResponse(data[cur_idx], tools);
-            cur_idx++;
-          }
-        } else if (status_res.status) {
-          tools.reply(
-            `I've found some ${status_res.status} ${target} that may interest you:`
-          );
-          cur_idx = 0;
-          while (cur_idx < data.length && cur_idx < 4) {
-            await formatInfoResponse(data[cur_idx], tools);
-            cur_idx++;
-          }
-        } else {
-          tools.reply(
-            `I'm afraid I do not understand your request. Try specifying a genre or describing the ${target}.`
-          );
+        switch (switch_exp) {
+          case "STATUS": // Detected status related query
+            tools.reply(
+              `I've found some ${status_res.status} ${target} that may interest you:`
+            );
+            cur_idx = 0;
+            while (cur_idx < data.length && cur_idx < 4) {
+              await formatInfoResponse(data[cur_idx], tools);
+              cur_idx++;
+            }
+            break;
+          case "NAME": // Name detected
+            tools.reply(
+              `Here is more information about the ${target} _${name}_`
+            );
+            await formatInfoResponse(data[0], tools);
+            break;
+          case "GUESS": // Name guessed
+            tools.reply(`You may be thinking of the ${target} _${name}_`);
+            // Get first
+            await formatInfoResponse(data[0], tools);
+            // Other
+            tools.reply(`Other relevant ${target} may be:`);
+            // Loop
+            cur_idx = 1;
+            while (cur_idx < data.length && cur_idx < 4) {
+              await formatInfoResponse(data[cur_idx], tools);
+              cur_idx++;
+            }
+            break;
+          case "GENRE": // No Name detected -> Use Genre
+            tools.reply(
+              `Based on your description, here are some ${target} that may be of interest:`
+            );
+            cur_idx = 0;
+            while (cur_idx < data.length && cur_idx < 4) {
+              await formatInfoResponse(data[cur_idx], tools);
+              cur_idx++;
+            }
+            break;
+          default:
+            tools.reply(
+              `I'm afraid I do not understand your request. Try specifying a genre or describing the ${target}.`
+            );
         }
       }
     } catch (e) {
@@ -634,26 +629,32 @@ function formQueryParams(
   genre_ids,
   tools
 ) {
-  let base = `type=${type}`;
+  let query = `type=${type}`;
+  let switch_exp = 0;
   if (status) {
-    base += `&status=${status}`;
+    query += `&status=${status}`;
+    switch_exp = "STATUS";
   }
   // Name detected
   if (name && !is_guess) {
-    return `${base}&q=${name}`;
+    query = `${query}&q=${name}`;
+    switch_exp = "NAME";
   } else if (is_guess) {
-    return `${base}&q=${name}`;
+    query = `${query}&q=${name}`;
+    switch_exp = "GUESS";
   }
   // No Name detected
   else if (genre_ids.length !== 0) {
     genres_string = genre_ids.join(",");
     invalidGenresString = invalidGenres.join(",");
-    return invalidGenres.length === 0
-      ? `${base}&genres=${genres_string}`
-      : `${base}&q=${invalidGenresString}&genres=${genres_string}`;
+    query =
+      invalidGenres.length === 0
+        ? `${query}&genres=${genres_string}`
+        : `${query}&q=${invalidGenresString}&genres=${genres_string}`;
+    switch_exp = "GENRE";
   }
 
-  return base;
+  return { query, switch_exp };
 }
 
 async function formatInfoResponse(content, tools) {
