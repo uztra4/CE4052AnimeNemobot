@@ -474,6 +474,19 @@ async function handleTrending(payload, state, tools) {
 }
 
 // HANDLE SEARCH
+const searchResponseType = {
+  NAME: "NAME",
+  GENRE: "GENRE",
+  STATUS: "STATUS",
+  GUESS: "GUESS",
+};
+
+const statusType = {
+  AIRING: "airing",
+  COMPLETE: "complete",
+  UPCOMING: "upcoming",
+};
+
 async function handleSearch(payload, state, tools) {
   /*
   This function extracts out the details from the user's message and tries to find related information.
@@ -557,7 +570,7 @@ async function handleSearch(payload, state, tools) {
         );
       } else {
         switch (switch_exp) {
-          case "STATUS": // Detected status related query
+          case searchResponseType.STATUS: // Detected status related query
             tools.reply(
               `I've found some ${status_res.status} ${target} that may interest you:`
             );
@@ -567,13 +580,13 @@ async function handleSearch(payload, state, tools) {
               cur_idx++;
             }
             break;
-          case "NAME": // Name detected
+          case searchResponseType.NAME: // Name detected
             tools.reply(
               `Here is more information about the ${target} _${name}_`
             );
             await formatInfoResponse(data[0], tools);
             break;
-          case "GUESS": // Name guessed
+          case searchResponseType.GUESS: // Name guessed
             tools.reply(`You may be thinking of the ${target} _${name}_`);
             // Get first
             await formatInfoResponse(data[0], tools);
@@ -586,7 +599,7 @@ async function handleSearch(payload, state, tools) {
               cur_idx++;
             }
             break;
-          case "GENRE": // No Name detected -> Use Genre
+          case searchResponseType.GENRE: // No Name detected -> Use Genre
             tools.reply(
               `Based on your description, here are some ${target} that may be of interest:`
             );
@@ -624,24 +637,21 @@ function matchGenreWithMalIDs(genres) {
 
 function formQueryParams(
   invalidGenres,
-  { is_guess, target, name, type },
+  { name_detected, is_guess, target, name, type },
   status,
   genre_ids,
   tools
 ) {
   let query = `type=${type}`;
   let switch_exp = 0;
-  if (status) {
-    query += `&status=${status}`;
-    switch_exp = "STATUS";
-  }
+
   // Name detected
-  if (name && !is_guess) {
+  if (name_detected && !is_guess) {
     query = `${query}&q=${name}`;
-    switch_exp = "NAME";
+    switch_exp = searchResponseType.NAME;
   } else if (is_guess) {
     query = `${query}&q=${name}`;
-    switch_exp = "GUESS";
+    switch_exp = searchResponseType.GUESS;
   }
   // No Name detected
   else if (genre_ids.length !== 0) {
@@ -651,9 +661,12 @@ function formQueryParams(
       invalidGenres.length === 0
         ? `${query}&genres=${genres_string}`
         : `${query}&q=${invalidGenresString}&genres=${genres_string}`;
-    switch_exp = "GENRE";
+    switch_exp = searchResponseType.GENRE;
   }
-
+  if (status === statusType.UPCOMING) {
+    query += `&status=${status}`;
+    switch_exp = searchResponseType.STATUS;
+  }
   return { query, switch_exp };
 }
 
