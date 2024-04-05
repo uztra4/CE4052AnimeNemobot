@@ -493,7 +493,8 @@ async function handleSearch(payload, state, tools) {
   let invalidGenres = [];
   // keep valid genres
   for (let g of genres) {
-    if (jikanGenres.includes(g.toLowerCase())) validGenres.push(g.toLowerCase());
+    if (jikanGenres.includes(g.toLowerCase()))
+      validGenres.push(g.toLowerCase());
     else invalidGenres.push(g);
   }
 
@@ -505,13 +506,15 @@ async function handleSearch(payload, state, tools) {
   console.log("In handleSearch, genre_ids: ", genre_ids);
 
   // Get status
-  const status_res = JSON.parse(await tools.statusExtractor({userMessage: payload}));
+  const status_res = JSON.parse(
+    await tools.statusExtractor({ userMessage: payload })
+  );
   console.log("handleSearch, status: ", status_res);
 
   // Get details
   const res_ai = JSON.parse(
     await tools.searchHelper(
-      { userMessage: payload},
+      { userMessage: payload },
       {
         memory: tools.getChatHistory(0),
         externalTools: {
@@ -537,17 +540,17 @@ async function handleSearch(payload, state, tools) {
       "I'm sorry. I did not quite understand your request. Perhaps you can try phrasing it differently?"
     );
   } else {
-    const {
-      is_guess,
-      name_detected,
-      target,
-      name,
-      type,
-    } = res_ai;
-  
+    const { is_guess, name_detected, target, name, type } = res_ai;
+
     // Returns ?queries
     try {
-      let query = formQueryParams(invalidGenres, res_ai, status_res.status, genre_ids, tools);
+      let query = formQueryParams(
+        invalidGenres,
+        res_ai,
+        status_res.status,
+        genre_ids,
+        tools
+      );
       let api = `${jikanBaseApi}/${target}?${query}`;
 
       console.log("handleSearch, API: ", api);
@@ -589,6 +592,15 @@ async function handleSearch(payload, state, tools) {
             await formatInfoResponse(data[cur_idx], tools);
             cur_idx++;
           }
+        } else if (status_res.status) {
+          tools.reply(
+            `I've found some ${status_res.status} ${target} that may interest you:`
+          );
+          cur_idx = 0;
+          while (cur_idx < data.length && cur_idx < 4) {
+            await formatInfoResponse(data[cur_idx], tools);
+            cur_idx++;
+          }
         } else {
           tools.reply(
             `I'm afraid I do not understand your request. Try specifying a genre or describing the ${target}.`
@@ -617,12 +629,7 @@ function matchGenreWithMalIDs(genres) {
 
 function formQueryParams(
   invalidGenres,
-  {
-    is_guess,
-    target,
-    name,
-    type,
-  },
+  { is_guess, target, name, type },
   status,
   genre_ids,
   tools
@@ -645,6 +652,8 @@ function formQueryParams(
       ? `${base}&genres=${genres_string}`
       : `${base}&q=${invalidGenresString}&genres=${genres_string}`;
   }
+
+  return base;
 }
 
 async function formatInfoResponse(content, tools) {
