@@ -42,7 +42,6 @@ Make sure that the information are displayed in the format below. Display it in 
 {IMAGE if it is given in the {{content}}}
 ## Synopsis
 All other relevant information
-Trailer only if a trailer link is provided.
 
 Example format for:
 # {title in {{content}}}\n
@@ -52,8 +51,9 @@ Example format for:
 **Average Rating**: {Average Rating in {{content}}}\n
 **Status**: {Status in {{content}}}\n
 **No. of Episodes**: {episodeCount in {{content}}}\n
+Trailer link
 
-
+Do not provide trailer if link is not available.
 
 * user
 {{content}}
