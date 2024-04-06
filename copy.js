@@ -306,169 +306,79 @@ function resetState(state) {
 // HANDLE TRENDING
 async function handleTrending(payload, state, tools) {
   console.log("In handletrending; ", state);
-  var {
-    isTrendingAnimeRequested,
-    isTrendingMangaRequested,
-    isGenreRequested,
-    genreReq,
-  } = state;
-
-  // get user's response, convert to lower case
-  var response = payload.toLowerCase().trim();
-
-  if (!isTrendingAnimeRequested && !isTrendingMangaRequested) {
-    var request = await tools.getUserWants(
-      { userMessage: response },
-      { memory: tools.getChatHistory(10) }
-    );
-    // if satisfy one of the functions
-    // this is done so that the chat bot wont reply "trending anime" / "trending manga"
-    if (request === "trending anime") {
-      tools.reply(
-        `We detected that you want to get ${request}. Is that correct?`
-      );
-      state.isTrendingAnimeRequested = true;
-    } else if (request === "trending manga") {
-      tools.reply(
-        `We detected that you want to get ${request}. Is that correct?`
-      );
-      state.isTrendingMangaRequested = true;
-    } else {
-      tools.reply(request);
+  const apiURL = `https://kitsu.io/api/edge/`;
+  const trendingReq = await tools.trendingReq({userMessage: payload}, {memory: tools.getChatHistory(5)});
+  console.log(trendingReq);
+  try {
+    const trendingReqJSON = JSON.parse(trendingReq);
+    const trendingData = await getTrending(trendingReq);
+    tools.reply(`Generating 5 ${trendingReqJSON["req"]} ${trendingReqJSON["type"]} now!`)
+    for (let i = 0; i < 5; i++) {
+      const topData = JSON.parse(trendingData)["data"][i]["attributes"];
+      // some titles not included in the data hence need to define manually
+      if ((topData["titles"]["en"]) !== null){
+        var title = topData["titles"]["en"];
+      } else if ((topData["titles"]["en_jp"]) !== null){
+        var title = topData["titles"]["en_jp"];
+      } else if ((topData["titles"]["en_us"]) !== null) {
+        var title = topData["titles"]["en_us"];
+      }
+      if (trendingReqJSON["type"] === "anime"){
+        info = `Title: ${title}\n
+        Image: ${(topData['posterImage']['small'])}\n 
+        Sypnosis: ${topData["synopsis"]} \n
+        Average Rating: ${topData["averageRating"]} \n
+        Status: ${topData["status"]} \n
+        No. of Episodes: ${topData["episodeCount"]}\n
+        Trailer Link: ${topData["youtubeVideoId"]}`;
+      } 
+      else if (trendingReqJSON["type"] === "manga"){
+        info = `Title: ${title}\n
+        Image: ${(topData['posterImage']['small'])}\n 
+        Sypnosis: ${topData["synopsis"]} \n
+        Average Rating: ${topData["averageRating"]} \n
+        Status: ${topData["status"]} \n
+        No. of Volumes: ${topData['volumeCount']}\n
+        No. of Chapter: ${topData['chapterCount']}`;
+      }
+      tools.reply(await tools.formatMessage({ content: info }));
     }
+    tools.reply(`Let me know what more you want to query!`);
+  } catch (error) {
+    console.log(error);
+    tools.reply(trendingReq);
   }
 
-  // ask for genre
-  if (
-    (isTrendingAnimeRequested || isTrendingMangaRequested) &&
-    !isGenreRequested
-  ) {
-    const genre = await tools.getGenre(
-      { userMessage: response },
-      { memory: tools.getChatHistory(5) }
-    );
-    if (genreList.includes(genre) || positive.includes(response)) {
-      state.genreReq = genre;
-      // if got preference
-      if (genreReq === `` || genreReq === null) {
-        tools.reply(genre);
-      } else if (state.genreReq !== `anything`) {
-        tools.reply(
-          `We detected that the genre you want is ${state.genreReq}. Is that correct?`
-        );
-        state.isGenreRequested = true;
-      } else {
-        tools.reply(
-          `We will provide trending anime/manga for all genres. Is that ok?`
-        );
-        state.isGenreRequested = true;
-      }
-    } else if (response === "no"){
-      tools.reply("Please let us know what you want to query!");
-      resetState(state);
-    } else {
-      tools.reply(genre);
-    }
-  }
-
-  //////////////////////////////////////////////get trending anime/////////////////////////////////////////////////
-  if (isTrendingAnimeRequested && isGenreRequested) {
-    if (positive.includes(response)) {
-      // get trending anime from api
-      getTrendingAnime = await getTrending(
-        genreReq,
-        isTrendingAnimeRequested,
-        isTrendingMangaRequested
-      );
-
-      // if no error detected, generate top 5 anime
-      if (!getTrendingAnime.includes("Error")) {
-        // convert to Javascript object
-        const trendingAnime = JSON.parse(getTrendingAnime);
-        tools.reply(
-          `Here are the top 5 anime that are trending for ${genreReq} right now!`
-        );
-        for (let i = 0; i < 5; i++) {
-          const animeInfo = trendingAnime["data"][i]["attributes"];
-          top5Anime = `Title: ${animeInfo["titles"]["en_jp"]}
-            Image: ${(animeInfo['posterImage']['small'])}\n 
-            Sypnosis: ${animeInfo["synopsis"]} \n
-            Average Rating: ${animeInfo["averageRating"]} \n
-            Status: ${animeInfo["status"]} \n
-            No. of Episodes: ${animeInfo["episodeCount"]}`;
-          tools.reply(await tools.formatMessage({ content: top5Anime }));
-        }
-      }
-      // if error detected, return error message and try again
-      else {
-        tools.reply(getTrendingAnime);
-      }
-    }
-    // done generating trending anime
-    tools.reply("Let me know what more you want to query!");
-    resetState(state);
-  }
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-  //////////////////////////////////////////////get trending manga/////////////////////////////////////////////////
-  if (isTrendingMangaRequested && isGenreRequested) {
-    if (positive.includes(response)) {
-      // get trending anime from api
-      getTrendingManga = await getTrending(
-        genreReq,
-        isTrendingAnimeRequested,
-        isTrendingMangaRequested
-      );
-      // if no error detected, generate top 5 anime
-      if (!getTrendingManga.includes("Error")) {
-        // convert to Javascript object
-        const trendingManga = JSON.parse(getTrendingManga);
-        tools.reply(
-          `Here are the top 5 manga that are trending for ${genreReq} right now!`
-        );
-        for (let i = 0; i < 5; i++) {
-          const mangaInfo = trendingManga['data'][i]['attributes'];
-            top5Manga = `Title: ${mangaInfo['canonicalTitle']}\n
-            Image: ${(mangaInfo['posterImage']['small'])}\n
-            Sypnosis: ${(mangaInfo['synopsis'])} \n
-            Average Rating: ${mangaInfo['averageRating']} \n
-            Status: ${mangaInfo['status']} \n
-            No. of Volumes: ${mangaInfo['volumeCount']}\n
-            No. of Chapter: ${mangaInfo['chapterCount']}`;
-            tools.reply(await tools.formatMessage({content: top5Manga})); 
-        }
-      }
-      // if error detected, return error message and try again
-      else {
-        tools.reply(getTrendingManga);
-      }
-    }
-    // done generating trending anime
-    tools.reply("Let me know what more you want to query!");
-    resetState(state);
-  }
-  async function getTrending(
-    genreChoice,
-    isTrendingAnimeRequested,
-    isTrendingMangaRequested
-  ) {
-    if (isTrendingAnimeRequested) {
-      var apiURL = `https://kitsu.io/api/edge/anime?`;
-    } else if (isTrendingMangaRequested) {
-      var apiURL = `https://kitsu.io/api/edge/manga?`;
-    }
-    if (genreChoice !== "null") {
-      apiURL = apiURL + `filter[categories]=${genreChoice}`;
-    }
+  
+  async function getTrending(trendingReq){
     try {
-      const trending = await fetch(apiURL, {
+      const trendingReqJSON = JSON.parse(trendingReq);
+      switch (trendingReqJSON["req"]){
+        case "top":
+          apiURLSearch = apiURL + trendingReqJSON["type"];
+          if (trendingReqJSON["genre"] === null){
+            apiURLSearch = apiURLSearch;
+          } else {
+            apiURLSearch = apiURLSearch + `?filter[categories]=${trendingReqJSON["genre"]}`;
+          }
+          break;
+        case "trending":
+          var apiURLSearch = apiURL + `trending/` + trendingReqJSON["type"];
+          break;
+          
+      }
+    } catch (error){
+      tools.reply(trendingReq);
+    }
+    console.log(apiURLSearch)
+    try {
+      const trending = await fetch(apiURLSearch, {
         method: "GET",
         headers: {
           "Content-Type": "application/vnd.api+json",
         },
       });
       const trendingText = await trending.text();
-      console.log(trendingText)
       return trendingText;
     } catch (error) {
       const errorMsg = `Error fetching trending manga/anime: ${error}`;
@@ -726,7 +636,7 @@ async function handleGetQuote(payload, state, tools) {
         if (quoteReqJson['returnType'] === "anime"){
           apiURLSearch = apiURL + `anime?title=` + quoteReqJson["en_jp"];
           response = await fetch(apiURLSearch);
-          console.log(apiURL);
+          console.log(apiURLSearch);
           console.log(response);
         }
       }

@@ -49,6 +49,8 @@ Make sure that the information are displayed in the format below. Display it in 
 **No. of Episodes**: {episodeCount in {{content}}}\n
 All other relevant information
 
+For manga information, there is no trailer links so you dont have to add that into the response.
+
 * user
 {{content}}
 

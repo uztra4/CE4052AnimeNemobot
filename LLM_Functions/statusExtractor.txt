@@ -3,6 +3,7 @@ statusExtractor
 
 ## DESCRIPTION
 Extracts a status from the user's message.
+
 ## ARGUMENT
 userMessage
 ## PARAMTERS
