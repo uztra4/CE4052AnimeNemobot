@@ -46,10 +46,12 @@ Make sure that the information are displayed in the format below. Display it in 
 {Synopsis in {{content}}}
 **Average Rating**: {Average Rating in {{content}}}\n
 **Status**: {Status in {{content}}}\n
-**No. of Episodes**: {episodeCount in {{content}}}\n
-All other relevant information
+**No. of Episodes**: {No. of Episodes in {{{content}}}\n //for anime 
+**No. of Volumes**: {No. of Volumes in {{{content}}}\n //for manga
+**No. of Chapters**: {No. of Chapters in {{{content}}}\n //for manga
+All other relevant information, excluding synopsis.
 
-For manga information, there is no trailer links so you dont have to add that into the response.
+For manga information, there is no trailer links so you MUST NOT add that into the response.
 
 * user
 {{content}}
