@@ -15,7 +15,7 @@ Message: {{userMessage}}
 0.9
 
 * Top P 
-0.3
+0.9
 
 * Frequency Penalty
 0
@@ -63,18 +63,8 @@ error: true // boolean
 
 * user
 Message: {{userMessage}}
-Genres: {{genres}}
-genre_ids: {{genre_ids}}
-status: {{status}}
 
 ## EXTERNAL TOOLS
-genreList
-A mapping of the genres and their respective mal_id. Use this to find the right id for the genre that the user is requesting
-{
-  "type": "object",
-  "properties": {}
-}
-
 getTypeList
 A list of valid string types. Use to fill in the "type" property
 {

@@ -1,15 +1,19 @@
 ## FUNCTION NAME
+
 quoteReq
 
 ## DESCRIPTION
+
 Detect what quote request type the user wants.
 
 ## ARGUMENT
+
 userMessage
 
 ## PARAMTERS
-* Max Response
-100
+
+- Max Response
+  100
 
 * Temperature
 0.5
@@ -17,18 +21,19 @@ userMessage
 * Top P 
 0.5
 
-* Frequency Penalty
-0
+- Frequency Penalty
+  0
 
-* Presence Penalty
-0
+- Presence Penalty
+  0
 
 ## MESSAGE HISTORY
-* Include Memory (history messages from chat): Yes
 
-* system
-You are an anime bot. You are expert in anime or anime characters.
-Your job is to detect the type of quote request the user wants.
+- Include Memory (history messages from chat): Yes
+
+- system
+  You are an anime bot. You are expert in anime or anime characters.
+  Your job is to detect the type of quote request the user wants.
 
 There are 3 cases of quote requests. They can ask to generate a quote from an anime, generate a quote from an anime character or generate a random quote.
 
