@@ -15,6 +15,13 @@ const defaultState = {
   genreReq: null, //store the preferred genre
   quoteReq: null, //store what kind of quote request they want
 };
+  currentReq: null, // current user's request
+  isTrendingAnimeRequested: false, //if trending anime is requested
+  isTrendingMangaRequested: false, //if trending anime is requested
+  isGenreRequested: false, //if genre is asked
+  genreReq: null, //store the preferred genre
+  quoteReq: null, //store what kind of quote request they want
+};
 
 const genreList = [
   "anything",
@@ -252,6 +259,28 @@ const jikanTypeList = {
     "manhua",
   ],
 };
+const jikanTypeList = {
+  anime: [
+    "tv",
+    "movie",
+    "ova",
+    "special",
+    "ona",
+    "music",
+    "cm",
+    "pv",
+    " tv_special",
+  ],
+  manga: [
+    "manga",
+    "novel",
+    "lightnovel",
+    "oneshot",
+    "doujin",
+    "manhwa",
+    "manhua",
+  ],
+};
 async function run(payload, state, tools) {
   // console.log("In Run: ", state)
   try {
@@ -326,7 +355,10 @@ function resetState(state) {
 async function handleTrending(payload, state, tools) {
   console.log("In handletrending; ", state);
   const apiURL = `https://kitsu.io/api/edge/`;
-  const trendingReq = await tools.trendingReq({userMessage: payload}, {memory: tools.getChatHistory(5)});
+  const trendingReq = await tools.trendingReq(
+    { userMessage: payload },
+    { memory: tools.getChatHistory(5) }
+  );
   console.log(trendingReq);
 
   try {
@@ -358,16 +390,15 @@ async function handleTrending(payload, state, tools) {
       } 
       if (trendingReqJSON["type"] === "anime"){
         info = `Title: ${title}\n
-        Image: ${(topData['posterImage']['small'])}\n 
+        Image: ${topData["posterImage"]["small"]}\n 
         Sypnosis: ${topData["synopsis"]} \n
         Average Rating: ${topData["averageRating"]} \n
         Status: ${topData["status"]} \n
         No. of Episodes: ${topData["episodeCount"]}\n
         Trailer Link: ${topData["youtubeVideoId"]}`;
-      } 
-      else if (trendingReqJSON["type"] === "manga"){
+      } else if (trendingReqJSON["type"] === "manga") {
         info = `Title: ${title}\n
-        Image: ${(topData['posterImage']['small'])}\n 
+        Image: ${topData["posterImage"]["small"]}\n 
         Sypnosis: ${topData["synopsis"]} \n
         Average Rating: ${topData["averageRating"]} \n
         Status: ${topData["status"]} \n
@@ -405,24 +436,24 @@ async function handleTrending(payload, state, tools) {
   async function getTrending(trendingReq){
     try {
       const trendingReqJSON = JSON.parse(trendingReq);
-      switch (trendingReqJSON["req"]){
+      switch (trendingReqJSON["req"]) {
         case "top":
           apiURLSearch = apiURL + trendingReqJSON["type"];
-          if (trendingReqJSON["genre"] === null){
+          if (trendingReqJSON["genre"] === null) {
             apiURLSearch = apiURLSearch;
           } else {
-            apiURLSearch = apiURLSearch + `?filter[categories]=${trendingReqJSON["genre"]}`;
+            apiURLSearch =
+              apiURLSearch + `?filter[categories]=${trendingReqJSON["genre"]}`;
           }
           break;
         case "trending":
           var apiURLSearch = apiURL + `trending/` + trendingReqJSON["type"];
           break;
-          
       }
-    } catch (error){
+    } catch (error) {
       tools.reply(trendingReq);
     }
-    console.log(apiURLSearch)
+    console.log(apiURLSearch);
     try {
       const trending = await fetch(apiURLSearch, {
         method: "GET",
@@ -466,12 +497,18 @@ async function handleSearch(payload, state, tools) {
     payload,
     tools
   );
+  const { validGenres, invalidGenres, genre_ids } = await handleExtractGenres(
+    payload,
+    tools
+  );
 
+  // console.log(genre_ids);
   // console.log(genre_ids);
   // Get status
   const status_res = JSON.parse(
     await tools.statusExtractor({ userMessage: payload })
   );
+  // console.log("handleSearch, status: ", status_res);
   // console.log("handleSearch, status: ", status_res);
 
   // Get details
@@ -481,13 +518,24 @@ async function handleSearch(payload, state, tools) {
       {
         memory: tools.getChatHistory(0),
         externalTool: {
+        externalTool: {
           getTypeList: () => {
+            return `${jikanTypeList}`;
             return `${jikanTypeList}`;
           },
         },
       }
     )
   );
+
+  console.log(
+    "handleSearch: ",
+    res_ai,
+    "\nStatus: ",
+    status_res,
+    `\nValidG: ${validGenres}\nInvalidG: ${invalidGenres}`
+  );
+
 
   console.log(
     "handleSearch: ",
@@ -523,6 +571,16 @@ async function handleSearch(payload, state, tools) {
         case searchResponseType.STATUS: // Detected status related query
           data = await jikanQuery(api_base + queryGenre);
           if (data.length > 0) {
+
+      let api_base = `${jikanBaseApi}/${target}?`;
+
+      let data;
+      let noDataMessage =
+        "I'm sorry, but I am unable to find information regarding your request.";
+      switch (switch_exp) {
+        case searchResponseType.STATUS: // Detected status related query
+          data = await jikanQuery(api_base + queryGenre);
+          if (data.length > 0) {
             tools.reply(
               `I've found some ${status_res.status} ${target} that may interest you:`
             );
@@ -537,10 +595,40 @@ async function handleSearch(payload, state, tools) {
         case searchResponseType.NAME: // Name detected
           data = await jikanQuery(api_base + queryName);
           if (data.length > 0) {
+          } else tools.reply(noDataMessage);
+
+          break;
+        case searchResponseType.NAME: // Name detected
+          data = await jikanQuery(api_base + queryName);
+          if (data.length > 0) {
             tools.reply(
               `Here is more information about the ${target} _${name}_`
             );
             await formatInfoResponse(data[0], tools);
+          } else tools.reply(noDataMessage);
+          break;
+        case searchResponseType.GUESS: // Name guessed
+          tools.reply(`You may be thinking of the ${target} _${name}_`);
+          data = await jikanQuery(api_base + queryName);
+          // Get first
+          await formatInfoResponse(data[0], tools);
+          // Other
+          if (queryGenre) {
+            let data2 = await jikanQuery(api_base + queryGenre);
+            if (data2.length > 0) {
+              tools.reply(`Other relevant ${target} may be:`);
+              // Loop
+              cur_idx = 0;
+              while (cur_idx < data2.length && cur_idx < 3) {
+                await formatInfoResponse(data2[cur_idx], tools);
+                cur_idx++;
+              }
+            }
+          }
+          break;
+        case searchResponseType.GENRE: // No Name detected -> Use Genre
+          data = await jikanQuery(api_base + queryGenre);
+          if (data.length > 0) {
           } else tools.reply(noDataMessage);
           break;
         case searchResponseType.GUESS: // Name guessed
@@ -579,6 +667,12 @@ async function handleSearch(payload, state, tools) {
           tools.reply(
             `I'm afraid I do not understand your request. Try specifying a genre or describing the ${target}.`
           );
+          } else tools.reply(noDataMessage);
+          break;
+        default:
+          tools.reply(
+            `I'm afraid I do not understand your request. Try specifying a genre or describing the ${target}.`
+          );
       }
     } catch (e) {
       console.log("Error in handleSearch: ", e);
@@ -588,9 +682,51 @@ async function handleSearch(payload, state, tools) {
     }
   }
   tools.reply("Please let me know if you require anymore assistance!");
+  tools.reply("Please let me know if you require anymore assistance!");
   resetState(state, tools);
 }
 
+async function handleExtractGenres(payload, tools) {
+  const { genres, thought } = JSON.parse(
+    await tools.genreExtractor(
+      {
+        userMessage: payload,
+      },
+      {
+        memory: tools.getChatHistory(1),
+        externalTool: {
+          getGenreList: () => {
+            return `The genres are ${jikanGenres}`;
+          },
+          getIgnoreList: () => {
+            // return undefined;
+            return `You must never include these words ${jikanTypeList} and 'anime'`;
+          },
+        },
+      }
+    )
+  );
+  // console.log("handleExtractGenres, genres: ", genres);
+  // console.log("handleExtractGenres, thought: ", thought);
+  let validGenres = [];
+  let invalidGenres = [];
+  // keep valid genres
+  for (let g of genres) {
+    if (jikanGenres.includes(g.toLowerCase()))
+      validGenres.push(g.toLowerCase());
+    else invalidGenres.push(g);
+  }
+
+  // console.log("handleExtractGenres, validGenres: ", validGenres);
+  // console.log("handleExtractGenres, invalidGenres: ", invalidGenres);
+
+  // Match Genre Ids
+  let genre_ids = matchGenreWithMalIDs(validGenres);
+
+  // console.log("In handleExtractGenres, genre_ids: ", genre_ids);
+
+  return { genre_ids, invalidGenres, validGenres };
+}
 async function handleExtractGenres(payload, tools) {
   const { genres, thought } = JSON.parse(
     await tools.genreExtractor(
@@ -653,12 +789,54 @@ function formQueryParams(
   let query = `type=${type}`;
   let queryName = null;
   let queryGenre = null;
+  let queryName = null;
+  let queryGenre = null;
   let switch_exp = 0;
 
   // Name detected
   if (name_detected && !is_guess) {
     queryName = `${query}&q=${name}`;
+    queryName = `${query}&q=${name}`;
     switch_exp = searchResponseType.NAME;
+    if (status === statusType.UPCOMING) {
+      queryName += `&status=${status}`;
+      // switch_exp = searchResponseType.STATUS;
+    }
+  } else {
+    if (is_guess) {
+      queryName = `${query}&q=${name}`;
+      switch_exp = searchResponseType.GUESS;
+    }
+    // For Genre Queries
+    if (genre_ids.length !== 0 || invalidGenres.length !== 0) {
+      genres_string = genre_ids.join(",");
+      invalidGenresString = invalidGenres.join(",");
+      queryGenre = query;
+      if (genre_ids.length !== 0) {
+        queryGenre += `&genres=${genres_string}`;
+      }
+
+      if (invalidGenres.length !== 0) {
+        queryGenre += `&q=${invalidGenresString}`;
+      }
+
+      // If no exp set
+      switch_exp = switch_exp === 0 ? searchResponseType.GENRE : switch_exp;
+    }
+
+    if (status === statusType.UPCOMING) {
+      queryGenre =
+        queryGenre === null
+          ? `${query}&status=${status}`
+          : `${queryGenre}&status=${status}`;
+      switch_exp =
+        switch_exp !== searchResponseType.GUESS
+          ? searchResponseType.STATUS
+          : switch_exp;
+    }
+  }
+
+  return { queryName, queryGenre, switch_exp };
     if (status === statusType.UPCOMING) {
       queryName += `&status=${status}`;
       // switch_exp = searchResponseType.STATUS;
@@ -720,8 +898,24 @@ async function jikanQuery(api) {
 
 // HANDLE QUOTE
 
+async function jikanQuery(api) {
+  console.log("jikanQuery, api: ", api);
+  const res = await fetch(api);
+  const res_json = await res.json();
+  const data = res_json.data;
+  // console.log("jikanQuery, data: ", data);
+
+  return data;
+}
+
+// HANDLE QUOTE
+
 async function handleGetQuote(payload, state, tools) {
   console.log("In handleGetQuote; ", state);
+  const quoteReq = await tools.quoteReq(
+    { userMessage: payload },
+    { memory: tools.getChatHistory(5) }
+  );
   const quoteReq = await tools.quoteReq(
     { userMessage: payload },
     { memory: tools.getChatHistory(5) }
@@ -730,21 +924,24 @@ async function handleGetQuote(payload, state, tools) {
   try {
     const quotes = await getQuote(quoteReq);
     console.log(JSON.parse(quotes)["error"]);
-    if (JSON.parse(quotes)["error"] === "No related quotes found!") {
+    if (JSON.parse(quotes)["error"] === "No related quotes found!")  {
       tools.reply("No related quotes found!");
-    } else {
+    }  else  {
       tools.reply("Generating quote...");
-      tools.reply(await tools.formatQuote({ content: quotes })); // Reply with the quotes
+      tools.reply(await tools.formatQuote({  content: quotes  })); // Reply with the quotes
       resetState(state);
     }
-  } catch (error) {
+  } catch (error)  {
     tools.reply(quoteReq);
   }
 
   async function getQuote(quoteReq) {
     quoteReqJson = JSON.parse(quoteReq);
     console.log(quoteReqJson["returnType"]);
+    quoteReqJson = JSON.parse(quoteReq);
+    console.log(quoteReqJson["returnType"]);
     var apiURL = `https://animechan.xyz/api/random/`;
+    switch (quoteReqJson["returnType"]) {
     switch (quoteReqJson["returnType"]) {
       case "random":
         apiURLSearch = `https://animechan.xyz/api/random`;
@@ -762,6 +959,7 @@ async function handleGetQuote(payload, state, tools) {
       // Check if the response status is ok
       if (!response.ok) {
         if (quoteReqJson["returnType"] === "anime") {
+        if (quoteReqJson["returnType"] === "anime") {
           apiURLSearch = apiURL + `anime?title=` + quoteReqJson["en_jp"];
           response = await fetch(apiURLSearch);
           console.log(apiURLSearch);
@@ -772,11 +970,13 @@ async function handleGetQuote(payload, state, tools) {
       const data = await response.json();
       // Handle the JSON data
       console.log("Data:", data);
+      console.log("Data:", data);
       console.log(JSON.stringify(data));
       // Construct quotesData
       return JSON.stringify(data);
     } catch (error) {
       // Handle errors
+      console.error("Error fetching data:", error);
       console.error("Error fetching data:", error);
       // Return error message
       return "No related quotes found!";
