@@ -239,7 +239,7 @@ const jikanTypeList = {
     "music",
     "cm",
     "pv",
-    " tv_special",
+    "tv_special",
   ],
   manga: [
     "manga",
@@ -632,7 +632,13 @@ async function handleExtractGenres(payload, tools) {
   for (let g of genres) {
     if (jikanGenres.includes(g.toLowerCase()))
       validGenres.push(g.toLowerCase());
-    else invalidGenres.push(g);
+    else if (
+      !jikanTypeList.anime.includes(g.toLowerCase()) &&
+      !jikanTypeList.manga.includes(g.toLowerCase()) &&
+      g.toLowerCase() !== "anime"
+    ) {
+      invalidGenres.push(g);
+    }
   }
 
   // console.log("handleExtractGenres, validGenres: ", validGenres);
