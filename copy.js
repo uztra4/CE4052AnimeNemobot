@@ -67,7 +67,6 @@ const reqList = `
 - Providing trending anime or manga based on genre, rating etc. 
 - Searching information about an anime/manga
 - Getting a random anime quote
-- Identifying an anime from an image
 `;
 
 const jikanGenresMapping = {
@@ -326,48 +325,62 @@ function resetState(state) {
 async function handleTrending(payload, state, tools) {
   console.log("In handletrending; ", state);
   const apiURL = `https://kitsu.io/api/edge/`;
-  const trendingReq = await tools.trendingReq({userMessage: payload}, {memory: tools.getChatHistory(5)});
+  const trendingReq = await tools.trendingReq(
+    { userMessage: payload },
+    { memory: tools.getChatHistory(5) }
+  );
   console.log(trendingReq);
 
   try {
     const trendingReqJSON = JSON.parse(trendingReq);
     const trendingData = await getTrending(trendingReq);
-    const updatedTime = new Date(JSON.parse(trendingData)["data"][0]["attributes"]["updatedAt"]);
+    const updatedTime = new Date(
+      JSON.parse(trendingData)["data"][0]["attributes"]["updatedAt"]
+    );
     if (trendingReqJSON["req"] === "trending") {
-      if (trendingReqJSON["genre"] !== null){
-        tools.reply(`We cannot provide trending ${trendingReqJSON["type"]} right now.`)
+      if (trendingReqJSON["genre"] !== null) {
+        tools.reply(
+          `We cannot provide trending ${trendingReqJSON["type"]} right now.`
+        );
       }
     }
-    tools.reply(`Generating 5 ${trendingReqJSON["req"]} ${trendingReqJSON["type"]} now!\n
+    tools.reply(`Generating 5 ${trendingReqJSON["req"]} ${
+      trendingReqJSON["type"]
+    } now!\n
     Information updated on ${updatedTime.toDateString()} ${updatedTime.toLocaleTimeString()}`);
     for (let i = 0; i < 5; i++) {
       const topData = JSON.parse(trendingData)["data"][i]["attributes"];
       // some titles not included in the data hence need to define manually
-      if (typeof topData["canonicalTitle"] !== "undefined"){
+      if (typeof topData["canonicalTitle"] !== "undefined") {
         var title = topData["canonicalTitle"];
-      } else if (typeof topData["titles"]["en"] !== "undefined"){
+      } else if (typeof topData["titles"]["en"] !== "undefined") {
         var title = topData["titles"]["en"];
-      } else if (typeof topData["titles"]["en_jp"] !== "undefined"){
+      } else if (typeof topData["titles"]["en_jp"] !== "undefined") {
         var title = topData["titles"]["en_jp"];
       } else if (typeof topData["titles"]["en_us"] !== "undefined") {
         var title = topData["titles"]["en_us"];
       }
-      var [volCount, chapCount] = [topData['volumeCount'], topData['chapterCount']];
-      if (trendingReqJSON["type"] === "manga" && (volCount === null || chapCount === null)){
+      var [volCount, chapCount] = [
+        topData["volumeCount"],
+        topData["chapterCount"],
+      ];
+      if (
+        trendingReqJSON["type"] === "manga" &&
+        (volCount === null || chapCount === null)
+      ) {
         [volCount, chapCount] = await getChapterVolume(title);
-      } 
-      if (trendingReqJSON["type"] === "anime"){
+      }
+      if (trendingReqJSON["type"] === "anime") {
         info = `Title: ${title}\n
-        Image: ${(topData['posterImage']['small'])}\n 
+        Image: ${topData["posterImage"]["small"]}\n 
         Sypnosis: ${topData["synopsis"]} \n
         Average Rating: ${topData["averageRating"]} \n
         Status: ${topData["status"]} \n
         No. of Episodes: ${topData["episodeCount"]}\n
         Trailer Link: ${topData["youtubeVideoId"]}`;
-      } 
-      else if (trendingReqJSON["type"] === "manga"){
+      } else if (trendingReqJSON["type"] === "manga") {
         info = `Title: ${title}\n
-        Image: ${(topData['posterImage']['small'])}\n 
+        Image: ${topData["posterImage"]["small"]}\n 
         Sypnosis: ${topData["synopsis"]} \n
         Average Rating: ${topData["averageRating"]} \n
         Status: ${topData["status"]} \n
@@ -382,7 +395,7 @@ async function handleTrending(payload, state, tools) {
     tools.reply(trendingReq);
   }
 
-  async function getChapterVolume(title){
+  async function getChapterVolume(title) {
     console.log(title);
     const apiURL = `https://api.mangadex.org/manga?title=${title}`;
     try {
@@ -402,27 +415,27 @@ async function handleTrending(payload, state, tools) {
       return errorMsg;
     }
   }
-  async function getTrending(trendingReq){
+  async function getTrending(trendingReq) {
     try {
       const trendingReqJSON = JSON.parse(trendingReq);
-      switch (trendingReqJSON["req"]){
+      switch (trendingReqJSON["req"]) {
         case "top":
           apiURLSearch = apiURL + trendingReqJSON["type"];
-          if (trendingReqJSON["genre"] === null){
+          if (trendingReqJSON["genre"] === null) {
             apiURLSearch = apiURLSearch;
           } else {
-            apiURLSearch = apiURLSearch + `?filter[categories]=${trendingReqJSON["genre"]}`;
+            apiURLSearch =
+              apiURLSearch + `?filter[categories]=${trendingReqJSON["genre"]}`;
           }
           break;
         case "trending":
           var apiURLSearch = apiURL + `trending/` + trendingReqJSON["type"];
           break;
-          
       }
-    } catch (error){
+    } catch (error) {
       tools.reply(trendingReq);
     }
-    console.log(apiURLSearch)
+    console.log(apiURLSearch);
     try {
       const trending = await fetch(apiURLSearch, {
         method: "GET",
@@ -782,10 +795,4 @@ async function handleGetQuote(payload, state, tools) {
       return "No related quotes found!";
     }
   }
-}
-
-// HANDLE IMAGE ID
-async function handleIdentifyImage(payload, state, tools) {
-  resetState(state, tools);
-  return;
 }
