@@ -272,9 +272,6 @@ async function run(payload, state, tools) {
       case 3:
         handleGetQuote(payload, state, tools);
         break;
-      case 4:
-        handleIdentifyImage(payload, state, tools);
-        break;
       default:
         handleError(state, tools);
     }
